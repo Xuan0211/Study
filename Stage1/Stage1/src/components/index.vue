@@ -41,7 +41,6 @@
 </template>
 <script>
 import * as d3 from 'd3';
-import { config } from 'vue/types/umd';
 
 export default {
   name: 'index',
@@ -50,7 +49,7 @@ export default {
       var1: '',
       var2: '',
       path: [
-        '../../data/李白.csv',
+        '"../../data/李白.csv"',
         '../../data/杜甫.csv',
         '../../data/白居易.csv'
       ],
@@ -59,12 +58,14 @@ export default {
   },
   methods: {
     generateVis() {
-      config.log('hello');
+      console.log('hello');
     }
   },
   mounted() {
-    d3.csv('path[0]', function (error, data) {
+    console.log(this.path[0]);
+    d3.csv('../../data/李白.csv', function (error, data) {
       if (error) { // 如果 error 不是 null，肯定出错了
+        console.log('加载错误！');
         console.log(error); // 输出错误消息
       } else { // 如果没出错，说明加载文件成功了
         console.log(data); // 输出数据
