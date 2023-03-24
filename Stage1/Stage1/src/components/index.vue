@@ -4,6 +4,9 @@
       <div class='control'>
         <h1>控制面板</h1>
         <h3>数据集</h3>
+        <h4 @click="click(0)">李白</h4>
+        <h4 @click="click(1)">杜甫</h4>
+        <h4 @click="click(2)">白居易</h4>
         <el-dropdown class='dropdown'>
           <span class='dropdowntext'>
             选择数据集
@@ -28,7 +31,7 @@
       </div>
       <div class='view1'>
         <h1>视图1</h1>
-        <svg width="600" height="500"></svg>
+        <svg id="chart" width="800" height="600"></svg>
       </div>
       <div class='view2'>
         <h1>视图2</h1>
@@ -53,27 +56,70 @@ export default {
         '../../data/杜甫.csv',
         '../../data/白居易.csv'
       ],
+      databank: [
+        [
+          {word: '天', value: 100},
+          {word: '道', value: 200},
+          {word: '有', value: 300},
+          {word: '轮', value: 150},
+          {word: '回', value: 120},
+          {word: '啊', value: 320}
+        ],
+        [
+          {word: '地', value: 100},
+          {word: '势', value: 130},
+          {word: '坤', value: 106},
+          {word: '厚', value: 200},
+          {word: '德', value: 300},
+          {word: '载', value: 120}
+        ],
+        [
+          {word: '人', value: 400},
+          {word: '定', value: 120},
+          {word: '胜', value: 300},
+          {word: '天', value: 200},
+          {word: '人', value: 104},
+          {word: '和', value: 150}
+        ]
+      ],
+      curIndex: 0,
       dataset: null
     };
   },
   methods: {
     generateVis() {
-      console.log('hello');
+      console.log('D3开始渲染');
+      const svg = d3.select('#chart');
+      const width = +svg.attr('width');
+      const height = +svg.attr('height');
+      const margin = {top: 60, bottom: 60, left: 90, right: 10};
+      const innerwidth = width - margin.left - margin.right;
+      const innerheight = height - margin.top - margin.bottom;
+      // 设置坐标轴
+      const xScale = d3.scaleLinear().domain([0, d3.max(this.databank[this.curIndex], d => d.value)]).range([0, innerwidth]);
+      const yScale = d3.scaleBand().domain(this.databank[this.curIndex].map(d => d.word)).range([0, innerheight]);
+      const g = svg.append('g').attr('id', 'maingroup').attr('transform', 'translate(80,50)');
+      // todo 问题出在这里了
+      const yAxis = d3.axisLeft(yScale);
+      g.append('g').call(yAxis);
+      const xAxis = d3.axisBottom(xScale);
+      g.append('g').call(xAxis);
+      this.databank[this.curIndex].forEach(d => {
+        g.append('rect').attr('width', xScale(d.value)).attr('height', yScale.bandwidth()).attr('fill', 'green').attr('y', yScale(d.word));
+      });
+    },
+    click(e) {
+      this.curIndex = e;
+      console.log(e);
+      d3.select('#maingroup').remove();
+      this.generateVis();
     }
   },
   mounted() {
-    console.log(this.path[0]);
-    d3.csv('../../data/李白.csv', function (error, data) {
-      if (error) { // 如果 error 不是 null，肯定出错了
-        console.log('加载错误！');
-        console.log(error); // 输出错误消息
-      } else { // 如果没出错，说明加载文件成功了
-        console.log(data); // 输出数据
-        // 包含成功加载数据后要执行的代码
-        this.dataset = data;
-        this.generateVis();
-      }
-    });
+    window.vue = this;// 试图用console调用vue内部的函数 \
+    this.dataset = this.databank[0];
+    console.log(this.dataset);
+    this.generateVis();
   }
 };
 </script>
