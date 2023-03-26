@@ -27,6 +27,8 @@ module.exports = {
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'off',
     'no-tabs':"off",
     'semi':0,
-    'space-before-function-paren': 0
+    'space-before-function-paren': 0,
+    'vue/html-closing-bracket-newline': 'off',
+    "no-unused-vars": 'off'
   }
 }

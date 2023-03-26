@@ -4,29 +4,18 @@
       <div class='control'>
         <h1>控制面板</h1>
         <h3>数据集</h3>
-        <h4 @click="click(0)">李白</h4>
-        <h4 @click="click(1)">杜甫</h4>
-        <h4 @click="click(2)">白居易</h4>
-        <el-dropdown class='dropdown'>
-          <span class='dropdowntext'>
-            选择数据集
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item>李白</el-dropdown-item>
-              <el-dropdown-item>杜甫</el-dropdown-item>
-              <el-dropdown-item>白居易</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <el-divider></el-divider>
+        <div class="controllist">
+          <el-button @click="click(0)">李白</el-button>
+          <el-button @click="click(1)">杜甫</el-button>
+          <el-button @click="click(2)">白居易</el-button>
+        </div>
         <div class='varcol'>
           <h5>参数A</h5>
-          <el-input class='input' v-model='var1' placeholder='请输入参数'></el-input>
+          <el-input class='input' placeholder='请输入参数' v-model="myColor" @change="change"></el-input>
         </div>
         <div class='varcol'>
           <h5>参数B</h5>
-          <el-input class='input' v-model='var2' placeholder='请输入参数'></el-input>
+          <el-input class='input' placeholder='请输入参数' v-model='myPadding' @change="change"></el-input>
         </div>
       </div>
       <div class='view1'>
@@ -35,6 +24,7 @@
       </div>
       <div class='view2'>
         <h1>视图2</h1>
+        <svg id="rightchart" width="100" height="600"></svg>
       </div>
     </div>
     <div class='buttom'>
@@ -49,8 +39,8 @@ export default {
   name: 'index',
   data() {
     return {
-      var1: '',
-      var2: '',
+      myColor: 'red',
+      myPadding: 0.2,
       path: [
         '"../../data/李白.csv"',
         '../../data/杜甫.csv',
@@ -58,32 +48,33 @@ export default {
       ],
       databank: [
         [
-          {word: '天', value: 100},
-          {word: '道', value: 200},
-          {word: '有', value: 300},
-          {word: '轮', value: 150},
-          {word: '回', value: 120},
-          {word: '啊', value: 320}
+          { word: '天', value: 100 },
+          { word: '道', value: 200 },
+          { word: '有', value: 300 },
+          { word: '轮', value: 150 },
+          { word: '回', value: 120 },
+          { word: '啊', value: 320 }
         ],
         [
-          {word: '地', value: 100},
-          {word: '势', value: 130},
-          {word: '坤', value: 106},
-          {word: '厚', value: 200},
-          {word: '德', value: 300},
-          {word: '载', value: 120}
+          { word: '地', value: 100 },
+          { word: '势', value: 130 },
+          { word: '坤', value: 106 },
+          { word: '厚', value: 200 },
+          { word: '德', value: 300 },
+          { word: '载', value: 120 }
         ],
         [
-          {word: '人', value: 400},
-          {word: '定', value: 120},
-          {word: '胜', value: 300},
-          {word: '天', value: 200},
-          {word: '人', value: 104},
-          {word: '和', value: 150}
+          { word: '人', value: 400 },
+          { word: '定', value: 120 },
+          { word: '胜', value: 300 },
+          { word: '天', value: 200 },
+          { word: '人', value: 104 },
+          { word: '和', value: 150 }
         ]
       ],
       curIndex: 0,
-      dataset: null
+      dataset: null,
+      clicktimes: 0
     };
   },
   methods: {
@@ -92,25 +83,60 @@ export default {
       const svg = d3.select('#chart');
       const width = +svg.attr('width');
       const height = +svg.attr('height');
-      const margin = {top: 60, bottom: 60, left: 90, right: 10};
+      const margin = { top: 50, bottom: 150, left: 50, right: 100 };
       const innerwidth = width - margin.left - margin.right;
       const innerheight = height - margin.top - margin.bottom;
       // 设置坐标轴
-      const xScale = d3.scaleLinear().domain([0, d3.max(this.databank[this.curIndex], d => d.value)]).range([0, innerwidth]);
-      const yScale = d3.scaleBand().domain(this.databank[this.curIndex].map(d => d.word)).range([0, innerheight]);
-      const g = svg.append('g').attr('id', 'maingroup').attr('transform', 'translate(80,50)');
-      // todo 问题出在这里了
+      const xScale = d3.scaleLinear()
+        .domain([0, d3.max(this.databank[this.curIndex], d => d.value)])
+        .range([0, innerwidth]);
+      const yScale = d3.scaleBand()
+        .domain(this.databank[this.curIndex]
+          .map(d => d.word))
+        .range([0, innerheight])
+        .padding(this.myPadding);//设置中间间隔
+      const g = svg.append('g')
+        .attr('id', 'maingroup')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
       const yAxis = d3.axisLeft(yScale);
-      g.append('g').call(yAxis);
+      g.append('g')
+        .call(yAxis);
       const xAxis = d3.axisBottom(xScale);
-      g.append('g').call(xAxis);
+      g.append('g')
+        .attr('transform', `translate(${0},${innerheight})`)
+        .call(xAxis);
       this.databank[this.curIndex].forEach(d => {
-        g.append('rect').attr('width', xScale(d.value)).attr('height', yScale.bandwidth()).attr('fill', 'green').attr('y', yScale(d.word));
-      });
+        g.append('rect')
+          .attr('width', xScale(d.value))
+          .attr('height', yScale.bandwidth())
+          .attr('fill', this.myColor )
+          .attr('y', yScale(d.word));
+      });      
+      g.selectAll('rect').on("click",(d,i) =>
+      {
+          console.log('点击事件触发');
+          console.log(d,i);
+          this.clicktimes ++;
+          const svg = d3.select("#rightchart");
+          const width= +svg.attr('width');
+          const height= +svg.attr('height');
+          svg.append('g')
+          .append('text')
+          .attr('transform',`translate(0,${this.clicktimes*50})`)
+          .text(`点击事件${this.clicktimes}`);
+        });
     },
     click(e) {
       this.curIndex = e;
       console.log(e);
+      // 想要动画捏
+      d3.select('#maingroup').remove();      
+      this.generateVis();
+    //  d3.select(`#data${e}`).attr('width',200);
+    //这句为啥不生效，一定要是svg吗？
+    },
+    change()
+    {
       d3.select('#maingroup').remove();
       this.generateVis();
     }
@@ -118,8 +144,8 @@ export default {
   mounted() {
     window.vue = this;// 试图用console调用vue内部的函数 \
     this.dataset = this.databank[0];
-    console.log(this.dataset);
-    this.generateVis();
+    console.log(this.dataset);    
+    this.generateVis();    
   }
 };
 </script>
@@ -181,5 +207,11 @@ export default {
 
 .input {
   width: auto;
+}
+
+.controllist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 </style>
