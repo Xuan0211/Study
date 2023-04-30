@@ -24,7 +24,15 @@
       </div>
       <div class='view2'>
         <h1>视图2</h1>
-        <svg id="rightchart" width="100" height="600"></svg>
+        <svg id="rightchart" width="100" height="300"></svg>
+        <div>
+        <el-button @click="startselection">开始框选</el-button>
+        <el-button @click="endselection">结束框选</el-button>
+      </div>
+        <p>框选元素</p>
+        <div v-for="item in selection">
+          {{ item.word }}{{ item.value }}
+        </div>
       </div>
     </div>
     <div class='buttom'>
@@ -41,11 +49,6 @@ export default {
     return {
       myColor: 'red',
       myPadding: 0.2,
-      path: [
-        '"../../data/李白.csv"',
-        '../../data/杜甫.csv',
-        '../../data/白居易.csv'
-      ],
       databank: [
         [
           { word: '天', value: 100 },
@@ -74,11 +77,15 @@ export default {
       ],
       curIndex: 0,
       dataset: null,
-      clicktimes: 0
+      clicktimes: 0,
+      selection:undefined,
+      lastselection:'',
+      linedata:[],
     };
   },
   methods: {
     generateVis() {
+      let that= this;
       console.log('D3开始渲染');
       const svg = d3.select('#chart');
       const width = +svg.attr('width');
@@ -105,47 +112,125 @@ export default {
       g.append('g')
         .attr('transform', `translate(${0},${innerheight})`)
         .call(xAxis);
-      this.databank[this.curIndex].forEach(d => {
-        g.append('rect')
-          .attr('width', xScale(d.value))
-          .attr('height', yScale.bandwidth())
-          .attr('fill', this.myColor )
-          .attr('y', yScale(d.word));
-      });      
-      g.selectAll('rect').on("click",(d,i) =>
-      {
+      // 绘制矩形图
+      g.selectAll('rect').data(this.databank[this.curIndex]).join('rect')
+        .transition().duration(100)
+        .attr('width', d => xScale(d.value))
+        .attr('height', yScale.bandwidth())
+        .attr('fill', this.myColor)
+        .attr('y', d => yScale(d.word));
+        g.selectAll("circle")
+        .data(this.databank[this.curIndex])
+        .enter()
+        .append("circle")
+        .attr("cx", function(d) {
+              return xScale(d.value);
+        })
+        .attr("cy", function(d) {
+              return yScale(d.word)+0.5*yScale.bandwidth();
+        })
+        .attr("r", 5)
+        .style("fill","black")
+        .on("click",(d,i) =>
+        {
           console.log('点击事件触发');
-          console.log(d,i);
-          this.clicktimes ++;
+          console.log(d, i);
+          that.clicktimes++;
           const svg = d3.select("#rightchart");
-          const width= +svg.attr('width');
-          const height= +svg.attr('height');
+          const width = +svg.attr('width');
+          const height = +svg.attr('height');
           svg.append('g')
-          .append('text')
-          .attr('transform',`translate(0,${this.clicktimes*50})`)
-          .text(`点击事件${this.clicktimes}`);
+            .append('text')
+            .attr('transform', `translate(0,${that.clicktimes * 50})`)
+            .text(`点击事件${that.clicktimes}`);
+          that.linedata.push({
+            word: i.word,
+            value: i.value
+          });
+          
+          console.log(that.linedata);
+          let line = d3.line()
+                    .x(function(d)
+                    {
+                      return xScale(d.value);
+                    })
+                    .y(function(d)
+                    {
+                      return yScale(d.word)+0.5*yScale.bandwidth();
+                    });
+          g.append('path')
+              .attr('class', 'line')
+              .attr('d', line(that.linedata))
+              .attr('fill', 'none')
+              .attr('stroke-width', 3)
+              .attr('stroke', 'green');;
         });
+    
     },
     click(e) {
       this.curIndex = e;
       console.log(e);
       // 想要动画捏
-      d3.select('#maingroup').remove();      
-      this.generateVis();
-    //  d3.select(`#data${e}`).attr('width',200);
-    //这句为啥不生效，一定要是svg吗？
-    },
-    change()
-    {
       d3.select('#maingroup').remove();
       this.generateVis();
+    },
+    change() {
+      d3.select('#maingroup').remove();
+      this.generateVis();
+    },
+    startselection()
+    {
+      const svg = d3.select('#chart');
+      const width = +svg.attr('width');
+      const height = +svg.attr('height');
+      const margin = { top: 50, bottom: 150, left: 50, right: 100 };
+      const innerwidth = width - margin.left - margin.right;
+      const innerheight = height - margin.top - margin.bottom;
+      // 设置坐标轴
+      const xScale = d3.scaleLinear()
+        .domain([0, d3.max(this.databank[this.curIndex], d => d.value)])
+        .range([0, innerwidth]);
+      const yScale = d3.scaleBand()
+        .domain(this.databank[this.curIndex]
+          .map(d => d.word))
+        .range([0, innerheight])
+        .padding(this.myPadding);//设置中间间隔
+      let g = d3.select("#maingroup");
+      console.log("selection start");
+      const brush = d3.brush()
+                      .on("start brush end",brushed);
+      let that = this;
+      function brushed({selection})
+      {
+        if(selection)
+        {
+          const [[x0,y0],[x1,y1]]=selection;
+          that.selection = g.selectAll('circle')
+                  .filter(d => x0 <= xScale(d.value) && xScale(d.value) < x1 && y0 <= yScale(d.word)+0.5*yScale.bandwidth() && yScale(d.word)+0.5*yScale.bandwidth() < y1)
+                  .style("fill","gray")
+                  .data();
+        }
+        else
+        {
+          g.selectAll('circle')
+            .style("fill","black");
+        }
+      }
+      g.call(brush);
+    },
+    endselection()
+    {
+      console.log("selection end"); 
+      d3.select('#maingroup').on(".brush",null);
     }
   },
   mounted() {
-    window.vue = this;// 试图用console调用vue内部的函数 \
-    this.dataset = this.databank[0];
-    console.log(this.dataset);    
-    this.generateVis();    
+    d3.csv("/李白.csv",function(data){
+      console.log(data);
+      this.databank[0] = data;
+      this.generateVis();
+    });
+    //this.generateVis();
   }
 };
 </script>
